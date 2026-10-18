@@ -1,4 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
+import { existsSync, readFileSync } from 'fs';
+import { join } from 'path';
 import { SEED_DOCTORS, SEED_TEMPLATES } from './data';
 import { parseCollectionsCsv } from './csv';
 import { FeeEngine } from './engine/engine';
@@ -10,7 +12,7 @@ let seq = 0;
 const nid = (p: string) => `${p}-${Date.now().toString(36)}${(seq++).toString(36)}`;
 
 @Injectable()
-export class StoreService {
+export class StoreService implements OnModuleInit {
   private doctors: Doctor[] = structuredClone(SEED_DOCTORS);
   private templates: PayoutTemplate[] = structuredClone(SEED_TEMPLATES);
   private collections: Collection[] = [];
@@ -19,6 +21,18 @@ export class StoreService {
   private engine = new FeeEngine();
   readonly history = new PayoutHistory();
   readonly changeLog = new TemplateChangeLog();
+
+  // Preload the good sample CSVs and calculate both months so every tab has data on first run.
+  // Set DEMO_SEED=0 to start empty.
+  onModuleInit() {
+    if (process.env.DEMO_SEED === '0') return;
+    const dir = join(__dirname, '..', '..', 'sample-data');
+    const files = ['collections-good.csv', 'collections-good-2026-02.csv'];
+    if (!files.every((f) => existsSync(join(dir, f)))) return;
+    for (const f of files) this.ingestCsv(f, readFileSync(join(dir, f), 'utf8'));
+    for (const m of ['2026-01', '2026-02']) this.calculate(m, 'seed');
+    new Logger('Seed').log('Preloaded sample collections and calculated 2026-01, 2026-02');
+  }
 
   // doctors
   listDoctors = () => this.doctors;

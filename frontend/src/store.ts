@@ -23,6 +23,7 @@ interface State {
   assign: (doctorId: string, templateId: string) => Promise<void>;
   upload: (f: File) => Promise<void>;
   calculate: () => Promise<void>;
+  loadPayouts: () => Promise<void>;
   download: (path: string, fallbackName: string) => Promise<void>;
 }
 
@@ -35,7 +36,16 @@ export const useStore = create<State>((set, get) => {
     role: null, doctors: [], templates: [], uploads: [], collections: [], payouts: [], runs: [], comparison: [], changes: [],
     month: '2026-01', lastUpload: null, error: null,
     login: (role) => set({ role, error: null }),
-    setMonth: (month) => set({ month }),
+    setMonth: (month) => {
+      set({ month });
+      void get().loadPayouts();
+    },
+    // Show the latest saved calculation for the selected month (none yet -> empty).
+    loadPayouts: async () => {
+      const month = get().month;
+      const payouts = await call<Payout[]>(`/payouts?month=${month}`).catch(() => [] as Payout[]);
+      if (get().month === month) set({ payouts });
+    },
     clearError: () => set({ error: null }),
     loadAll: () => guard(async () => {
       const [doctors, templates, uploads, collections, runs, comparison, changes] = await Promise.all([
@@ -45,6 +55,7 @@ export const useStore = create<State>((set, get) => {
         call<TemplateChange[]>('/templates/changelog'),
       ]);
       set({ doctors, templates, uploads, collections, runs, comparison, changes });
+      await get().loadPayouts();
     }),
     saveTemplate: (t) => guard(async () => {
       await call(t.id ? `/templates/${t.id}` : '/templates', { method: t.id ? 'PUT' : 'POST', body: JSON.stringify(t) });

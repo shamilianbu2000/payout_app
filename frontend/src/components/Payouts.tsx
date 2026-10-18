@@ -32,7 +32,7 @@ export function Payouts() {
         </section>
       ))}
       {payouts.length > 0 && <p className="total">Total payout for {month}: <strong>{money(total)}</strong></p>}
-      {!payouts.length && <p className="muted">Upload collections, then calculate payouts for a month.</p>}
+      {!payouts.length && <p className="muted">No payouts calculated for this month yet. Click “Calculate payouts”.</p>}
       <Comparison />
     </>
   );

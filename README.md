@@ -28,7 +28,7 @@ npm test                 # backend Jest tests
 npm run build            # build both
 ```
 
-Demo flow: Login as Admin -> Collections tab -> upload `sample-data/collections.csv` (intentionally bad rows, see the error report) -> upload `sample-data/collections-good.csv` and `sample-data/collections-good-2026-02.csv` -> Payouts tab -> month `2026-01` -> Calculate (then 2026-02 and 2026-01 again to see the chart and history versions).
+Demo flow: sample collections for 2026-01 and 2026-02 are preloaded and calculated at startup (set `DEMO_SEED=0` to start empty), so Payouts, History and the comparison chart have data immediately. Login as Admin -> Collections tab -> upload `sample-data/collections.csv` (intentionally bad rows, see the error report) -> Payouts tab -> Calculate again to see a new history version.
 
 ## API (base `http://localhost:3004`, CORS enabled)
 
