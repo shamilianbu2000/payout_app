@@ -34,3 +34,9 @@ tr.bad { background: #fff1f1; }
 .slab-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
 .slab-row input { width: 100px; }
 .actions { display: flex; justify-content: flex-end; gap: 8px; }
+.chart { width: 100%; max-height: 260px; }
+.bar.gross, .sw.gross { fill: #93b4f5; background: #93b4f5; }
+.bar.payout, .sw.payout { fill: #2563eb; background: #2563eb; }
+.legend { display: flex; gap: 6px; align-items: center; font-size: .85rem; }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-left: 6px; }
+h3 { margin: 16px 0 6px; }

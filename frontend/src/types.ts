@@ -8,3 +8,6 @@ export interface Collection { id: string; uploadId: string; doctorId: string; da
 export interface PayoutLine { label: string; base: number; rate?: number; amount: number }
 export interface Payout { doctorId: string; doctorName: string; templateName: string; month: string; gross: number; lines: PayoutLine[]; payout: number }
 export type Role = 'admin' | 'viewer';
+export interface PayoutRun { id: string; month: string; version: number; createdAt: string; createdBy: string; totalGross: number; totalPayout: number; results: Payout[] }
+export interface TemplateChange { id: string; templateId: string; templateName: string; action: 'created' | 'updated'; at: string; by: string; changes: string[] }
+export interface MonthSummary { month: string; version: number; runId: string; doctors: { doctorId: string; doctorName: string; gross: number; payout: number }[] }

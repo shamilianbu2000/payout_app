@@ -15,7 +15,7 @@ const describe = (t: Template) =>
   : (t.slabs ?? []).map((s) => `${money(s.from)}-${s.to === null ? '∞' : money(s.to)} @ ${s.rate}%`).join(' | ');
 
 export function Templates() {
-  const { templates, saveTemplate, role } = useStore();
+  const { templates, saveTemplate, role, changes } = useStore();
   const [draft, setDraft] = useState<Template | null>(null);
   const admin = role === 'admin';
   const set = (p: Partial<Template>) => setDraft((d) => (d ? { ...d, ...p } : d));
@@ -47,6 +47,20 @@ export function Templates() {
               <td><button disabled={!admin} onClick={() => setDraft(structuredClone(t))}>Edit</button></td>
             </tr>
           ))}
+        </tbody>
+      </table>
+
+      <h3>Change log</h3>
+      <table>
+        <thead><tr><th>When</th><th>Who</th><th>Template</th><th>Action</th><th>What changed</th></tr></thead>
+        <tbody>
+          {changes.map((c) => (
+            <tr key={c.id}>
+              <td>{new Date(c.at).toLocaleString()}</td><td>{c.by}</td><td>{c.templateName}</td><td>{c.action}</td>
+              <td>{c.changes.join('; ')}</td>
+            </tr>
+          ))}
+          {!changes.length && <tr><td colSpan={5} className="muted">No template changes yet</td></tr>}
         </tbody>
       </table>
 

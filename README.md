@@ -2,6 +2,15 @@
 
 Admin tool that turns monthly doctor collections into payouts. Payout rules live in reusable **templates** (flat %, marginal slabs, fixed fee) that are assigned per doctor. Collections arrive as CSV uploads with row-level validation, and a "calculate payouts" action produces a per-doctor, per-slab breakdown.
 
+## Features
+
+- Payout templates (flat %, marginal slabs, fixed fee) assigned per doctor; CSV collection uploads with row-level validation; per-slab payout calculation.
+- **Payout history**: every calculation is saved as a run; recalculating a month creates a new version (v1, v2, ...). The History tab lists runs and opens any of them.
+- **PDF statement** per doctor per month (collections, slab breakdown, payout) via pdfkit, with a download button.
+- **Excel export** of a month's payouts (summary + breakdown sheets) via exceljs.
+- **Month-over-month chart** (plain SVG bars, gross vs payout per doctor, latest version of each month) under the Payouts tab.
+- **Template change log**: every create/edit records who (role), when and what changed; shown in the Templates tab.
+
 ## Stack
 
 - Frontend: React + TypeScript (Vite), Zustand, Radix UI (Dialog, Tabs, Select), plain CSS
@@ -19,7 +28,7 @@ npm test                 # backend Jest tests
 npm run build            # build both
 ```
 
-Demo flow: Login as Admin -> Collections tab -> upload `sample-data/collections.csv` (intentionally bad rows, see the error report) -> upload `sample-data/collections-good.csv` -> Payouts tab -> month `2026-01` -> Calculate.
+Demo flow: Login as Admin -> Collections tab -> upload `sample-data/collections.csv` (intentionally bad rows, see the error report) -> upload `sample-data/collections-good.csv` and `sample-data/collections-good-2026-02.csv` -> Payouts tab -> month `2026-01` -> Calculate (then 2026-02 and 2026-01 again to see the chart and history versions).
 
 ## API (base `http://localhost:3004`, CORS enabled)
 
@@ -36,6 +45,12 @@ Demo flow: Login as Admin -> Collections tab -> upload `sample-data/collections.
 | GET | `/uploads` | Upload history with error reports | no |
 | POST | `/payouts/calculate` | `{ month: "YYYY-MM" }` returns per-doctor breakdown | yes |
 | GET | `/payouts?month=YYYY-MM` | Last calculated result for the month | no |
+| GET | `/payouts/history?month=YYYY-MM` | Payout runs (newest first; month optional) with `version`, totals and results | no |
+| GET | `/payouts/history/:id` | One payout run | no |
+| GET | `/payouts/comparison` | Latest run of every calculated month, per-doctor gross and payout (chart data) | no |
+| GET | `/payouts/export?month=YYYY-MM` or `?runId=` | Excel (.xlsx) of the latest (or given) run | no |
+| GET | `/payouts/statement?doctorId=D001&month=YYYY-MM` or `&runId=` | PDF payout statement | no |
+| GET | `/templates/changelog` | Template create/edit log (who, when, what changed), newest first | no |
 
 CSV columns: `doctor_id,date,amount,reference`. Validation: required columns (otherwise 400), non-empty values, date `YYYY-MM-DD`, numeric amount > 0, known doctor ID, and duplicates (same doctor + date + reference, within the file or already uploaded). Valid rows are kept; invalid rows are reported with row number, field and message.
 
@@ -60,6 +75,7 @@ Template: 0-50,000 @ 40%, 50,000-100,000 @ 50%, 100,000+ @ 60%. Gross = 120,000:
 
 ## Notes
 
+- Run versions, the change log and "who" (the mock role from `x-role`) are in memory only.
 - Data resets whenever the backend restarts (in-memory only).
 - Uploaded files are parsed in memory (2 MB limit) and not stored.
 - Mock role header is for demo purposes and is not real security.

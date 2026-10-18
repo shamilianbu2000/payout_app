@@ -2,7 +2,9 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { SEED_DOCTORS, SEED_TEMPLATES } from './data';
 import { parseCollectionsCsv } from './csv';
 import { FeeEngine } from './engine/engine';
-import { Collection, Doctor, PayoutResult, PayoutTemplate, UploadRecord } from './types';
+import { PayoutHistory } from './history';
+import { TemplateChangeLog } from './changelog';
+import { Collection, Doctor, PayoutResult, PayoutRun, PayoutTemplate, UploadRecord } from './types';
 
 let seq = 0;
 const nid = (p: string) => `${p}-${Date.now().toString(36)}${(seq++).toString(36)}`;
@@ -15,6 +17,8 @@ export class StoreService {
   private uploads: UploadRecord[] = [];
   private payouts = new Map<string, PayoutResult[]>();
   private engine = new FeeEngine();
+  readonly history = new PayoutHistory();
+  readonly changeLog = new TemplateChangeLog();
 
   // doctors
   listDoctors = () => this.doctors;
@@ -33,17 +37,20 @@ export class StoreService {
     if (!t) throw new NotFoundException(`Template ${id} not found`);
     return t;
   }
-  createTemplate(body: Partial<PayoutTemplate>): PayoutTemplate {
+  createTemplate(body: Partial<PayoutTemplate>, by = 'unknown'): PayoutTemplate {
     const t = this.validateTemplate({ ...body, id: nid('T') });
     this.templates.push(t);
+    this.changeLog.record(undefined, t, by);
     return t;
   }
-  updateTemplate(id: string, body: Partial<PayoutTemplate>): PayoutTemplate {
-    this.getTemplate(id);
+  updateTemplate(id: string, body: Partial<PayoutTemplate>, by = 'unknown'): PayoutTemplate {
+    const before = this.getTemplate(id);
     const t = this.validateTemplate({ ...body, id });
     this.templates = this.templates.map((x) => (x.id === id ? t : x));
+    this.changeLog.record(before, t, by);
     return t;
   }
+  listTemplateChanges = () => this.changeLog.list();
 
   private validateTemplate(b: Partial<PayoutTemplate>): PayoutTemplate {
     const bad = (m: string) => { throw new BadRequestException(m); };
@@ -90,7 +97,7 @@ export class StoreService {
     this.collections.filter((c) => !month || c.date.startsWith(month));
 
   // payouts
-  calculate(month: string): PayoutResult[] {
+  calculate(month: string, by = 'unknown'): PayoutResult[] {
     if (!/^\d{4}-\d{2}$/.test(month ?? '')) throw new BadRequestException('month must be YYYY-MM');
     const results = this.doctors.map((d): PayoutResult => {
       const gross = this.collections
@@ -101,7 +108,25 @@ export class StoreService {
       return { doctorId: d.id, doctorName: d.name, templateId: t.id, templateName: t.name, month, gross, lines, payout };
     });
     this.payouts.set(month, results);
+    this.history.record(month, results, by);
     return results;
   }
   getPayouts = (month: string) => this.payouts.get(month) ?? [];
+
+  // history & reports
+  listRuns = (month?: string) => this.history.list(month);
+  getRun(id: string): PayoutRun {
+    const r = this.history.get(id);
+    if (!r) throw new NotFoundException(`Run ${id} not found`);
+    return r;
+  }
+  /** Run by id, else latest run of the month; 404 if none. */
+  resolveRun(month?: string, runId?: string): PayoutRun {
+    if (runId) return this.getRun(runId);
+    if (!/^\d{4}-\d{2}$/.test(month ?? '')) throw new BadRequestException('month must be YYYY-MM (or pass runId)');
+    const r = this.history.latest(month!);
+    if (!r) throw new NotFoundException(`No payouts calculated for ${month} yet`);
+    return r;
+  }
+  comparison = () => this.history.comparison();
 }

@@ -5,6 +5,7 @@ import { Doctors } from './components/Doctors';
 import { Templates } from './components/Templates';
 import { Uploads } from './components/Uploads';
 import { Payouts } from './components/Payouts';
+import { History } from './components/History';
 
 export default function App() {
   const { role, login, loadAll, error, clearError } = useStore();
@@ -37,11 +38,12 @@ export default function App() {
       {role === 'viewer' && <div className="banner">Viewer role: changes are disabled.</div>}
       <Tabs.Root defaultValue="payouts">
         <Tabs.List className="tabs">
-          {['payouts', 'collections', 'templates', 'doctors'].map((t) => (
+          {['payouts', 'history', 'collections', 'templates', 'doctors'].map((t) => (
             <Tabs.Trigger key={t} value={t}>{t[0].toUpperCase() + t.slice(1)}</Tabs.Trigger>
           ))}
         </Tabs.List>
         <Tabs.Content value="payouts"><Payouts /></Tabs.Content>
+        <Tabs.Content value="history"><History /></Tabs.Content>
         <Tabs.Content value="collections"><Uploads /></Tabs.Content>
         <Tabs.Content value="templates"><Templates /></Tabs.Content>
         <Tabs.Content value="doctors"><Doctors /></Tabs.Content>

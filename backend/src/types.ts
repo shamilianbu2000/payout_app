@@ -64,3 +64,31 @@ export interface PayoutResult {
   lines: PayoutLine[];
   payout: number;
 }
+
+export interface PayoutRun {
+  id: string;
+  month: string;
+  version: number; // 1, 2, ... per month; recalculating creates a new version
+  createdAt: string;
+  createdBy: string;
+  totalGross: number;
+  totalPayout: number;
+  results: PayoutResult[];
+}
+
+export interface TemplateChange {
+  id: string;
+  templateId: string;
+  templateName: string;
+  action: 'created' | 'updated';
+  at: string;
+  by: string;
+  changes: string[]; // human-readable, e.g. "percent: 45 -> 50"
+}
+
+export interface MonthSummary {
+  month: string;
+  version: number;
+  runId: string;
+  doctors: { doctorId: string; doctorName: string; gross: number; payout: number }[];
+}

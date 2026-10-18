@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { api } from './api';
-import type { Collection, Doctor, Payout, Role, Template, Upload } from './types';
+import { api, download } from './api';
+import type { Collection, Doctor, MonthSummary, Payout, PayoutRun, Role, Template, TemplateChange, Upload } from './types';
 
 interface State {
   role: Role | null;
@@ -9,6 +9,9 @@ interface State {
   uploads: Upload[];
   collections: Collection[];
   payouts: Payout[];
+  runs: PayoutRun[];
+  comparison: MonthSummary[];
+  changes: TemplateChange[];
   month: string;
   lastUpload: Upload | null;
   error: string | null;
@@ -20,6 +23,7 @@ interface State {
   assign: (doctorId: string, templateId: string) => Promise<void>;
   upload: (f: File) => Promise<void>;
   calculate: () => Promise<void>;
+  download: (path: string, fallbackName: string) => Promise<void>;
 }
 
 export const useStore = create<State>((set, get) => {
@@ -28,17 +32,19 @@ export const useStore = create<State>((set, get) => {
     try { set({ error: null }); await fn(); } catch (e) { set({ error: (e as Error).message }); }
   };
   return {
-    role: null, doctors: [], templates: [], uploads: [], collections: [], payouts: [],
+    role: null, doctors: [], templates: [], uploads: [], collections: [], payouts: [], runs: [], comparison: [], changes: [],
     month: '2026-01', lastUpload: null, error: null,
     login: (role) => set({ role, error: null }),
     setMonth: (month) => set({ month }),
     clearError: () => set({ error: null }),
     loadAll: () => guard(async () => {
-      const [doctors, templates, uploads, collections] = await Promise.all([
+      const [doctors, templates, uploads, collections, runs, comparison, changes] = await Promise.all([
         call<Doctor[]>('/doctors'), call<Template[]>('/templates'),
         call<Upload[]>('/uploads'), call<Collection[]>('/collections'),
+        call<PayoutRun[]>('/payouts/history'), call<MonthSummary[]>('/payouts/comparison'),
+        call<TemplateChange[]>('/templates/changelog'),
       ]);
-      set({ doctors, templates, uploads, collections });
+      set({ doctors, templates, uploads, collections, runs, comparison, changes });
     }),
     saveTemplate: (t) => guard(async () => {
       await call(t.id ? `/templates/${t.id}` : '/templates', { method: t.id ? 'PUT' : 'POST', body: JSON.stringify(t) });
@@ -57,6 +63,8 @@ export const useStore = create<State>((set, get) => {
     }),
     calculate: () => guard(async () => {
       set({ payouts: await call<Payout[]>('/payouts/calculate', { method: 'POST', body: JSON.stringify({ month: get().month }) }) });
+      await get().loadAll();
     }),
+    download: (path, fallbackName) => guard(() => download(path, get().role ?? 'viewer', fallbackName)),
   };
 });
